@@ -317,10 +317,16 @@ export class PlayerController {
     this.position.y += this.velocity.y * delta;
     this.position.z += this.velocity.z * delta;
 
-    // 中央橋（X: -3.5〜3.5, Z: -14〜14）の床の高さ補正
-    let targetGroundY = 1.8; // 地面の高さ
-    if (Math.abs(this.position.x) < 3.8 && Math.abs(this.position.z) < 14) {
+    // 中央橋（X: -3.8〜3.8, Z: -15〜15）
+    let targetGroundY = 1.8; // 地面の通常高さ
+    if (Math.abs(this.position.x) < 3.8 && Math.abs(this.position.z) < 15) {
       targetGroundY = 3.6; // 橋の上
+    } else if (this.position.x >= -89 && this.position.x <= -71 && Math.abs(this.position.z - (-65)) < 5) {
+      targetGroundY = 4.9; // キリンデッキ（高さ3.1m + 目の高さ1.8m）
+    } else if (this.position.x > -71 && this.position.x <= -65 && Math.abs(this.position.z - (-65)) < 5) {
+      // キリンデッキのスロープ
+      const slopeProgress = (-65 - this.position.x) / 6.0;
+      targetGroundY = 1.8 + slopeProgress * 3.1;
     }
 
     if (this.position.y <= targetGroundY) {

@@ -83,7 +83,7 @@ export class HUD {
   getSpotCoords(id) {
     switch (id) {
       case 'gate': return { x: 0, y: 2, z: 85 };
-      case 'africa': return { x: -80, y: 2, z: -50 };
+      case 'africa': return { x: -80, y: 4.9, z: -65 };
       case 'polar': return { x: -45, y: 2, z: -65 };
       case 'greenhouse': return { x: 80, y: 2, z: 50 };
       case 'dino': return { x: -80, y: 2, z: 65 };
