@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- 検索エンジンインデックス除外（限定公開用） -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>のんほいパーク 3D バーチャル散策ワールド | 豊橋総合動植物公園</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦒</text></svg>">
+</head>
+<body>
+  <!-- 3Dレンダリング用コンテナ -->
+  <div id="canvas-container"></div>
+
+  <!-- UIレイヤー -->
+  <div id="ui-layer">
+    <!-- トップバー -->
+    <header class="top-bar">
+      <div class="brand-badge">
+        <span class="logo-icon">🦒</span>
+        <div>
+          <h1>NONHOI PARK 3D</h1>
+          <span class="sub-title">豊橋総合動植物公園 バーチャルツアー</span>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <!-- 時間帯切替 -->
+        <div class="time-selector interactive">
+          <button class="time-btn active" data-time="day">☀️ 昼</button>
+          <button class="time-btn" data-time="sunset">🌇 夕方</button>
+          <button class="time-btn" data-time="night">🌃 夜</button>
+        </div>
+
+        <!-- アクションボタン群 -->
+        <button id="btn-view-mode" class="btn-icon interactive" title="視点切替（FPS / TPS）">👁️</button>
+        <button id="btn-mute" class="btn-icon interactive" title="音量切替">🔊</button>
+        <button id="btn-photo" class="btn-icon interactive" title="写真撮影（スクリーンショット保存）">📷</button>
+      </div>
+    </header>
+
+    <!-- ミニマップ -->
+    <div class="minimap-container interactive">
+      <div class="minimap-header">
+        <span>🗺️ 園内マップ</span>
+        <span style="font-size:0.65rem; color:#86efac;">タップでワープ</span>
+      </div>
+      <canvas id="minimap-canvas" width="200" height="200"></canvas>
+    </div>
+
+    <!-- 操作ガイド（PC用） -->
+    <div class="controls-hint">
+      <div class="hint-row"><span class="key-badge">W A S D</span> / <span class="key-badge">矢印</span> 移動</div>
+      <div class="hint-row"><span class="key-badge">マウスドラッグ</span> 視点操作</div>
+      <div class="hint-row"><span class="key-badge">Space</span> ジャンプ</div>
+      <div class="hint-row"><span class="key-badge">Shift</span> ダッシュ</div>
+      <div class="hint-row"><span class="key-badge">V</span> 視点切替（FPS / TPS）</div>
+      <div class="hint-row"><span class="key-badge">E</span> スポット詳細案内</div>
+    </div>
+
+    <!-- 観覧車乗車中バッジ -->
+    <div id="ferris-ride-badge" class="interactive">
+      <span>🎡 観覧車に乗車中（絶景空中散歩）</span>
+      <button id="ferris-exit-btn">降りる</button>
+    </div>
+
+    <!-- インタラクションプロンプト -->
+    <div id="action-prompt" class="interactive">
+      <span>💡</span>
+      <span>[E] スポット案内を見る</span>
+    </div>
+
+    <!-- ファストトラベルバー -->
+    <nav class="quick-teleport-bar interactive">
+      <button class="teleport-chip" data-spot="gate">🎫 正門</button>
+      <button class="teleport-chip" data-spot="lake">🌊 中央大池</button>
+      <button class="teleport-chip" data-spot="africa">🦒 アフリカ園</button>
+      <button class="teleport-chip" data-spot="polar">🐻‍❄️ 極地館</button>
+      <button class="teleport-chip" data-spot="greenhouse">🌴 大温室</button>
+      <button class="teleport-chip" data-spot="dino">🦕 恐竜ランド</button>
+      <button class="teleport-chip" data-spot="ferris">🎡 大観覧車</button>
+    </nav>
+
+    <!-- モバイル用コントロール -->
+    <div class="mobile-controls">
+      <div id="joystick-zone" class="joystick-zone">
+        <div id="joystick-thumb" class="joystick-thumb"></div>
+      </div>
+      <div class="mobile-action-buttons">
+        <button id="mobile-jump-btn" class="mobile-btn" title="ジャンプ">🦘</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- スポット解説モーダル -->
+  <div id="spot-modal-backdrop" class="spot-modal-backdrop">
+    <div class="spot-modal">
+      <div class="spot-modal-header">
+        <div>
+          <span id="modal-spot-category" class="spot-category-tag">動物園</span>
+          <h2 id="modal-spot-title" class="spot-title">スポット名</h2>
+        </div>
+        <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="spot-image-box">
+        <div id="modal-spot-art" class="spot-placeholder-art">🦒</div>
+      </div>
+
+      <p id="modal-spot-desc" class="spot-desc">解説テキスト</p>
+      <div id="modal-spot-trivia" class="spot-trivia-box">豆知識</div>
+
+      <div class="spot-modal-actions">
+        <button id="modal-action-btn" class="btn-primary">アクション</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 限定公開：入園ゲート（パスコード入力画面） -->
+  <div id="gate-overlay">
+    <div class="gate-card">
+      <div class="gate-icon">🌿</div>
+      <h2 class="gate-title">のんほいパーク 3D</h2>
+      <p class="gate-subtitle">豊橋総合動植物公園 オンライン入園ゲート</p>
+
+      <div class="gate-notice">
+        🔒 このワールドは限定公開されています。<br>
+        入園合言葉（パスコード）を入力してください。
+      </div>
+
+      <div class="gate-input-group">
+        <input
+          type="text"
+          id="gate-passcode-input"
+          class="gate-input"
+          placeholder="合言葉を入力 (ヒント: nonhoi)"
+          autocomplete="off"
+          autofocus
+        >
+      </div>
+
+      <button id="gate-enter-btn" class="gate-btn">
+        <span>入園する（3D散策スタート）</span> ➔
+      </button>
+
+      <div id="gate-error" class="gate-error"></div>
+
+      <div class="share-section">
+        <p>※URL共有時は、合言葉入力なしで開ける専用リンクを作成できます</p>
+        <button id="copy-invite-link-btn" class="share-btn">
+          <span>🔗 ワンクリック招待URLをコピー</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast-msg" class="toast-msg"></div>
+
+  <!-- アプリケーションエントリー -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

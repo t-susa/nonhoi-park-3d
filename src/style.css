@@ -1,0 +1,764 @@
+:root {
+  --primary: #2d8a4e;
+  --primary-dark: #1b5e34;
+  --primary-light: #52b774;
+  --accent: #f59e0b;
+  --bg-overlay: rgba(18, 30, 22, 0.85);
+  --glass: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --text: #f8fafc;
+  --text-muted: #cbd5e1;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #0b130e;
+  font-family: 'Hiragino Kaku Gothic ProN', 'Segoe UI', 'Meiryo', sans-serif;
+  color: var(--text);
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* UIレイヤー */
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.interactive {
+  pointer-events: auto;
+}
+
+/* トップバー */
+.top-bar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-badge {
+  background: var(--bg-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  padding: 8px 16px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.brand-badge .logo-icon {
+  font-size: 1.2rem;
+}
+
+.brand-badge h1 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+.brand-badge .sub-title {
+  font-size: 0.75rem;
+  color: #86efac;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* 右上コントロール群 */
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: var(--bg-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
+}
+
+.btn-icon:hover {
+  background: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 138, 78, 0.4);
+}
+
+.btn-icon:active {
+  transform: translateY(0);
+}
+
+/* 時間帯セレクター */
+.time-selector {
+  background: var(--bg-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+.time-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.time-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(45, 138, 78, 0.5);
+}
+
+/* ミニマップコンテナ */
+.minimap-container {
+  position: absolute;
+  top: 76px;
+  right: 16px;
+  width: 200px;
+  height: 200px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
+.minimap-header {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 5;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.minimap-header span {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+#minimap-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* ファストトラベルボタン一覧（折りたたみ式） */
+.quick-teleport-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  padding: 6px 12px;
+  border-radius: 9999px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  max-width: 95vw;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.quick-teleport-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.teleport-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.teleport-chip:hover {
+  background: var(--primary);
+  border-color: var(--primary-light);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+/* 操作ガイドオーバーレイ */
+.controls-hint {
+  position: absolute;
+  bottom: 84px;
+  left: 20px;
+  background: rgba(18, 30, 22, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.controls-hint .hint-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key-badge {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* インタラクションプロンプト（近くに寄った時） */
+#action-prompt {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid #86efac;
+  border-radius: 30px;
+  padding: 10px 24px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 30px rgba(74, 222, 128, 0.4);
+  animation: pulsePrompt 1.5s infinite alternate ease-in-out;
+  cursor: pointer;
+}
+
+@keyframes pulsePrompt {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -50%) scale(1.06); }
+}
+
+/* モバイル用バーチャルコントロール */
+.mobile-controls {
+  position: absolute;
+  bottom: 90px;
+  left: 20px;
+  right: 20px;
+  display: none;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.joystick-zone {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  position: relative;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joystick-thumb {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  top: 35px;
+  left: 35px;
+  pointer-events: none;
+  transition: transform 0.05s linear;
+}
+
+.mobile-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.mobile-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--bg-overlay);
+  border: 2px solid var(--glass-border);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+
+.mobile-btn:active {
+  background: var(--primary);
+  transform: scale(0.92);
+}
+
+/* スポット情報モーダル */
+.spot-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.spot-modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.spot-modal {
+  background: linear-gradient(145deg, #16241a, #0c1610);
+  border: 1px solid rgba(134, 239, 172, 0.3);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 520px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.spot-modal-backdrop.open .spot-modal {
+  transform: translateY(0) scale(1);
+}
+
+.spot-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.spot-category-tag {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.spot-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #f0fdf4;
+}
+
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #cbd5e1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.spot-image-box {
+  width: 100%;
+  height: 180px;
+  border-radius: 14px;
+  background: #1e3324;
+  overflow: hidden;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.spot-image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.spot-placeholder-art {
+  font-size: 3.5rem;
+  animation: floatArt 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatArt {
+  0% { transform: translateY(-4px) scale(1); }
+  100% { transform: translateY(4px) scale(1.05); }
+}
+
+.spot-desc {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin-bottom: 20px;
+}
+
+.spot-trivia-box {
+  background: rgba(45, 138, 78, 0.15);
+  border-left: 3px solid var(--primary-light);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.85rem;
+  color: #86efac;
+  margin-bottom: 20px;
+}
+
+.spot-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary {
+  flex: 1;
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.95;
+  box-shadow: 0 4px 15px rgba(45, 138, 78, 0.4);
+}
+
+/* 入園ゲート（認証）画面 */
+#gate-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, #1a3825 0%, #08110b 100%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.gate-card {
+  background: rgba(22, 36, 26, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(134, 239, 172, 0.3);
+  border-radius: 28px;
+  width: 100%;
+  max-width: 440px;
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  animation: fadeInGate 0.6s ease-out;
+}
+
+@keyframes fadeInGate {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gate-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  display: inline-block;
+  animation: bounceSlow 2.5s infinite ease-in-out;
+}
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.gate-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.gate-subtitle {
+  font-size: 0.85rem;
+  color: #86efac;
+  margin-bottom: 24px;
+}
+
+.gate-notice {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.gate-input-group {
+  margin-bottom: 16px;
+}
+
+.gate-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 1rem;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 2px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.gate-input:focus {
+  border-color: #86efac;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+}
+
+.gate-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+.gate-error {
+  color: #f87171;
+  font-size: 0.8rem;
+  margin-top: 10px;
+  min-height: 1.2rem;
+}
+
+/* 招待リンク生成機能 */
+.share-section {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.share-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  margin-top: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.share-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* トースト通知 */
+.toast-msg {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #86efac;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 300;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-msg.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* 観覧車乗車中インジケータ */
+#ferris-ride-badge {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(245, 158, 11, 0.9);
+  color: #000;
+  font-weight: 800;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5);
+  z-index: 15;
+}
+
+#ferris-ride-badge button {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .minimap-container {
+    width: 140px;
+    height: 140px;
+    top: 68px;
+    right: 12px;
+  }
+  .controls-hint {
+    display: none;
+  }
+  .mobile-controls {
+    display: flex;
+  }
+  .quick-teleport-bar {
+    bottom: 16px;
+    padding: 4px 8px;
+  }
+  .teleport-chip {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+  .brand-badge h1 {
+    font-size: 0.85rem;
+  }
+  .brand-badge .sub-title {
+    display: none;
+  }
+}
