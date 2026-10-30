@@ -387,35 +387,32 @@ export class PlayerController {
     }
 
     // 4. 移動計算（一人称・三人称）
-    let moveX = 0;
-    let moveZ = 0;
+    let forwardInput = 0;
+    let rightInput = 0;
 
-    if (this.keys.forward) moveZ += 1;
-    if (this.keys.backward) moveZ -= 1;
-    if (this.keys.left) moveX -= 1;
-    if (this.keys.right) moveX += 1;
+    if (this.keys.forward) forwardInput += 1;
+    if (this.keys.backward) forwardInput -= 1;
+    if (this.keys.left) rightInput -= 1;
+    if (this.keys.right) rightInput += 1;
 
-    moveX += this.touchMoveVector.x;
-    moveZ += this.touchMoveVector.y;
+    rightInput += this.touchMoveVector.x;
+    forwardInput += this.touchMoveVector.y;
 
-    const inputLength = Math.hypot(moveX, moveZ);
+    const inputLength = Math.hypot(rightInput, forwardInput);
     const isMoving = inputLength > 0.05;
 
     if (isMoving) {
-      const normX = moveX / Math.max(1, inputLength);
-      const normZ = moveZ / Math.max(1, inputLength);
+      const normRight = rightInput / Math.max(1, inputLength);
+      const normForward = forwardInput / Math.max(1, inputLength);
       const currentSpeed = (this.keys.shift ? this.speed * this.runMultiplier : this.speed);
 
-      const sinYaw = Math.sin(this.yaw);
-      const cosYaw = Math.cos(this.yaw);
-
-      const forwardX = -sinYaw;
-      const forwardZ = -cosYaw;
+      const forwardX = Math.sin(this.yaw);
+      const forwardZ = Math.cos(this.yaw);
       const rightX = -forwardZ;
       const rightZ = forwardX;
 
-      const vx = (forwardX * normZ + rightX * normX) * currentSpeed;
-      const vz = (forwardZ * normZ + rightZ * normX) * currentSpeed;
+      const vx = (forwardX * normForward + rightX * normRight) * currentSpeed;
+      const vz = (forwardZ * normForward + rightZ * normRight) * currentSpeed;
 
       // 障害物との衝突判定とスムーズな壁沿いスライド
       const nextX = this.position.x + vx * delta;

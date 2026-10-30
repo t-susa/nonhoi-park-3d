@@ -131,7 +131,7 @@ export class MiniMap {
     const px = this.toMapX(this.player.position.x);
     const py = this.toMapY(this.player.position.z);
 
-    const lookAngle = -this.player.yaw - Math.PI / 2;
+    const lookAngle = Math.atan2(Math.cos(this.player.yaw), Math.sin(this.player.yaw));
     const coneLen = 14;
     ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
     ctx.beginPath();
