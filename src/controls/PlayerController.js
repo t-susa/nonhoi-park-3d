@@ -152,18 +152,20 @@ export class PlayerController {
       }
     }, { passive: true });
 
-    // モバイルタッチ（画面右半分で視点移動）
+    // モバイルタッチ（視点移動：スワイプでカメラの向きを変更）
     this.domElement.addEventListener('touchstart', (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        if (touch.clientX > window.innerWidth * 0.35 && this.touchLookId === null) {
+        // 左下のジョイスティック領域（幅160px × 高さ160px）以外のスワイプで視線移動開始
+        const isJoystickArea = (touch.clientX < 160 && touch.clientY > window.innerHeight - 160);
+        if (!isJoystickArea && this.touchLookId === null) {
           this.touchLookId = touch.identifier;
           this.touchLookPrev = { x: touch.clientX, y: touch.clientY };
         }
       }
     }, { passive: true });
 
-    this.domElement.addEventListener('touchmove', (e) => {
+    window.addEventListener('touchmove', (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         if (touch.identifier === this.touchLookId) {
@@ -171,9 +173,13 @@ export class PlayerController {
           const deltaY = touch.clientY - this.touchLookPrev.y;
 
           const sensitivity = 0.0042;
-          this.yaw -= deltaX * sensitivity;
-          this.pitch -= deltaY * sensitivity;
-          this.pitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.pitch));
+          this.targetYaw -= deltaX * sensitivity;
+          this.targetPitch -= deltaY * sensitivity;
+          this.targetPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.targetPitch));
+
+          // 現在角度も即時同期させて補間による引き戻り（戻ってしまう現象）を完全に解消
+          this.yaw = this.targetYaw;
+          this.pitch = this.targetPitch;
 
           this.touchLookPrev = { x: touch.clientX, y: touch.clientY };
         }
@@ -187,8 +193,8 @@ export class PlayerController {
         }
       }
     };
-    this.domElement.addEventListener('touchend', endTouchLook);
-    this.domElement.addEventListener('touchcancel', endTouchLook);
+    window.addEventListener('touchend', endTouchLook, { passive: true });
+    window.addEventListener('touchcancel', endTouchLook, { passive: true });
   }
 
   onKeyDown(e) {
