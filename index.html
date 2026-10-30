@@ -33,7 +33,7 @@
         </div>
 
         <!-- アクションボタン群 -->
-        <button id="btn-view-mode" class="btn-icon interactive" title="視点切替（FPS / TPS）">👁️</button>
+        <button id="btn-view-mode" class="btn-icon interactive" title="視点切替（一人称 FPS ➔ 三人称 TPS ➔ ドローン全景マップ）">👁️</button>
         <button id="btn-mute" class="btn-icon interactive" title="音量切替">🔊</button>
         <button id="btn-photo" class="btn-icon interactive" title="写真撮影（スクリーンショット保存）">📷</button>
       </div>
@@ -42,10 +42,10 @@
     <!-- ミニマップ -->
     <div class="minimap-container interactive">
       <div class="minimap-header">
-        <span>🗺️ 園内マップ</span>
+        <span>🗺️ 実寸園内マップ</span>
         <span style="font-size:0.65rem; color:#86efac;">タップでワープ</span>
       </div>
-      <canvas id="minimap-canvas" width="200" height="200"></canvas>
+      <canvas id="minimap-canvas" width="220" height="220"></canvas>
     </div>
 
     <!-- 操作ガイド（PC用） -->
@@ -54,7 +54,7 @@
       <div class="hint-row"><span class="key-badge">マウスドラッグ</span> 視点操作</div>
       <div class="hint-row"><span class="key-badge">Space</span> ジャンプ</div>
       <div class="hint-row"><span class="key-badge">Shift</span> ダッシュ</div>
-      <div class="hint-row"><span class="key-badge">V</span> 視点切替（FPS / TPS）</div>
+      <div class="hint-row"><span class="key-badge">V</span> 視点切替（FPS / TPS / ドローン全景マップ）</div>
       <div class="hint-row"><span class="key-badge">E</span> スポット詳細案内</div>
     </div>
 
@@ -72,13 +72,18 @@
 
     <!-- ファストトラベルバー -->
     <nav class="quick-teleport-bar interactive">
-      <button class="teleport-chip" data-spot="gate">🎫 正門</button>
-      <button class="teleport-chip" data-spot="lake">🌊 中央大池</button>
-      <button class="teleport-chip" data-spot="africa">🦒 アフリカ園</button>
-      <button class="teleport-chip" data-spot="polar">🐻‍❄️ 極地館</button>
-      <button class="teleport-chip" data-spot="greenhouse">🌴 大温室</button>
-      <button class="teleport-chip" data-spot="dino">🦕 恐竜ランド</button>
+      <button class="teleport-chip" data-spot="gate">🎫 中央門</button>
       <button class="teleport-chip" data-spot="ferris">🎡 大観覧車</button>
+      <button class="teleport-chip" data-spot="dino">🦕 恐竜ランド</button>
+      <button class="teleport-chip" data-spot="africa">🦒 キリンデッキ</button>
+      <button class="teleport-chip" data-spot="greenhouse">🌴 大温室</button>
+      <button class="teleport-chip" data-spot="polar">🐻‍❄️ 極地館</button>
+      <button class="teleport-chip" data-spot="elephant">🐘 ゾウ舎</button>
+      <button class="teleport-chip" data-spot="d51">🚂 D51機関車</button>
+      <button class="teleport-chip" data-spot="monet">🪷 モネの池</button>
+      <button class="teleport-chip" data-spot="lake">🌊 中央大池</button>
+      <button class="teleport-chip" data-spot="east_gate">🚪 東門</button>
+      <button class="teleport-chip" data-spot="west_gate">🚪 西門</button>
     </nav>
 
     <!-- モバイル用コントロール -->

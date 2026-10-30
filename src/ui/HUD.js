@@ -26,7 +26,7 @@ export class HUD {
       });
     });
 
-    // ミュート
+    // ミュート切替
     const muteBtn = document.getElementById('btn-mute');
     if (muteBtn) {
       muteBtn.addEventListener('click', () => {
@@ -35,22 +35,22 @@ export class HUD {
       });
     }
 
-    // 視点切り替え
+    // 視点切り替え（一人称 FPS ➔ 三人称 TPS ➔ ドローン全景マップ）
     const viewBtn = document.getElementById('btn-view-mode');
     if (viewBtn) {
       viewBtn.addEventListener('click', () => {
-        this.player.toggleViewMode();
-        viewBtn.textContent = this.player.viewMode === 'fps' ? '👁️' : '🚶';
+        this.player.cycleViewMode();
+        this.updateViewButtonIcon(viewBtn);
       });
     }
 
-    // 写真撮影（スクリーンショット）
+    // 写真撮影（スクリーンショット保存）
     const photoBtn = document.getElementById('btn-photo');
     if (photoBtn) {
       photoBtn.addEventListener('click', () => this.takeScreenshot());
     }
 
-    // インタラクションプロンプトクリック
+    // インタラクションプロンプト
     if (this.actionPrompt) {
       this.actionPrompt.addEventListener('click', () => {
         if (this.nearbySpot) {
@@ -59,12 +59,24 @@ export class HUD {
       });
     }
 
-    // キーボード [E] でスポット案内を開く
     window.addEventListener('keydown', (e) => {
       if ((e.code === 'KeyE') && this.nearbySpot && !this.dialog.isOpen) {
         this.dialog.open(this.nearbySpot);
       }
     });
+  }
+
+  updateViewButtonIcon(btn) {
+    if (this.player.viewMode === 'fps') {
+      btn.textContent = '👁️';
+      btn.title = '現在の視点：一人称 (FPS) — クリックで三人称へ';
+    } else if (this.player.viewMode === 'tps') {
+      btn.textContent = '🚶';
+      btn.title = '現在の視点：三人称 (TPS) — クリックでドローン全景マップへ';
+    } else if (this.player.viewMode === 'map') {
+      btn.textContent = '🗺️';
+      btn.title = '現在の視点：ドローン全景マップ — 地面クリックで移動';
+    }
   }
 
   setupTeleportChips() {
@@ -80,16 +92,22 @@ export class HUD {
     });
   }
 
+  // 実在OSM座標に基づく正確なファストトラベル先
   getSpotCoords(id) {
     switch (id) {
-      case 'gate': return { x: 0, y: 2, z: 85 };
-      case 'africa': return { x: -80, y: 4.9, z: -65 };
-      case 'polar': return { x: -45, y: 2, z: -65 };
-      case 'greenhouse': return { x: 80, y: 2, z: 50 };
-      case 'dino': return { x: -80, y: 2, z: 65 };
-      case 'ferris': return { x: 80, y: 2, z: -55 };
-      case 'lake': return { x: 0, y: 3.6, z: 0 };
-      default: return { x: 0, y: 2, z: 85 };
+      case 'gate': return { x: -204.9, y: 2.0, z: -45.0 };       // 中央門
+      case 'ferris': return { x: 176.5, y: 2.0, z: 90.0 };       // 大観覧車
+      case 'dino': return { x: -89.1, y: 2.0, z: -25.0 };        // 野外恐竜ランド
+      case 'africa': return { x: 129.2, y: 4.9, z: 44.2 };       // キリンデッキ
+      case 'greenhouse': return { x: 246.3, y: 2.0, z: -75.0 };   // 大温室
+      case 'polar': return { x: -91.9, y: 2.0, z: 115.0 };       // 極地動物館
+      case 'elephant': return { x: -149.3, y: 2.0, z: 155.0 };   // アジアゾウ舎
+      case 'd51': return { x: -237.5, y: 2.0, z: -5.0 };         // D51蒸気機関車
+      case 'monet': return { x: 190.4, y: 2.0, z: -165.0 };      // モネの池
+      case 'lake': return { x: 0.1, y: 2.0, z: -5.0 };           // 中央大池
+      case 'east_gate': return { x: 290.0, y: 2.0, z: -108.0 };  // 東門
+      case 'west_gate': return { x: -315.0, y: 2.0, z: 92.0 };   // 西門
+      default: return { x: -204.9, y: 2.0, z: -45.0 };
     }
   }
 
@@ -141,7 +159,6 @@ export class HUD {
 
           thumb.style.transform = `translate(${thumbX}px, ${thumbY}px)`;
 
-          // プレイヤー入力（Y反転：上方向は前進）
           this.player.touchMoveVector.x = thumbX / maxRadius;
           this.player.touchMoveVector.y = -thumbY / maxRadius;
         }
@@ -183,8 +200,7 @@ export class HUD {
   }
 
   update() {
-    // プレイヤーが近づいているスポットを検知
-    if (this.dialog.isOpen || this.player.isRidingFerris) {
+    if (this.dialog.isOpen || this.player.isRidingFerris || this.player.viewMode === 'map') {
       if (this.actionPrompt) this.actionPrompt.style.display = 'none';
       return;
     }

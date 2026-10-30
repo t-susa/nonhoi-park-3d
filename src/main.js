@@ -39,7 +39,8 @@ class App {
       this.world.camera,
       this.world.renderer.domElement,
       this.audio,
-      this.world.landmarks
+      this.world.landmarks,
+      this.world.mapBuilder
     );
 
     // ダイアログUI

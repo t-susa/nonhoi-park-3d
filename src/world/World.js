@@ -4,8 +4,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { TextureGenerator } from './TextureGenerator.js';
-import { Foliage } from './Foliage.js';
+import { MapBuilder } from './MapBuilder.js';
 import { Landmarks } from './Landmarks.js';
+import { Environment } from './Environment.js';
 
 export class World {
   constructor(container, audioManager) {
@@ -22,14 +23,11 @@ export class World {
     this.hemiLight = null;
     this.skyDome = null;
     this.stars = null;
-    this.waterMesh = null;
-    this.waterNormal = null;
-
-    // 雲
     this.clouds = [];
 
-    this.foliage = null;
+    this.mapBuilder = null;
     this.landmarks = null;
+    this.environment = null;
 
     this.currentTimeMode = 'day';
     this.clock = new THREE.Clock();
@@ -38,18 +36,18 @@ export class World {
   }
 
   init() {
-    // 1. シーン＆自然な大気フォグ
+    // 1. シーン＆自然な大気ヘイズ
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0xcde8f6, 0.0028);
+    this.scene.fog = new THREE.FogExp2(0xcde8f6, 0.0016); // 広大な園内を見通せるクリアな視程
 
-    // 2. カメラ
+    // 2. カメラ（初期位置：中央門 [-204.9, 2.0, -50.0]）
     this.camera = new THREE.PerspectiveCamera(
       58,
       window.innerWidth / window.innerHeight,
       0.1,
-      1000
+      2500
     );
-    this.camera.position.set(0, 3, 105);
+    this.camera.position.set(-204.9, 2.0, -45.0);
 
     // 3. 高性能WebGLレンダラー
     this.renderer = new THREE.WebGLRenderer({
@@ -68,23 +66,20 @@ export class World {
     // 4. ポストプロセッシング（EffectComposer ＋ UnrealBloomPass）
     this.setupPostProcessing();
 
-    // 5. 照明（PBR太陽光＆アンビエント）
+    // 5. 照明（太陽光・半球環境光）
     this.setupLighting();
 
-    // 6. 大気散乱スカイ＆流れる積雲
+    // 6. スカイ＆流れる積雲
     this.setupSkyAndClouds();
 
-    // 7. 高精細PBRテクスチャ地面＆敷石舗装路
-    this.setupGround();
+    // 7. 実寸大地・OSM道路網・実在128棟建築群の構築
+    this.mapBuilder = new MapBuilder(this.scene);
 
-    // 8. リアル水面（法線マップさざ波アニメーション）
-    this.setupWater();
-
-    // 9. 植生・3D草むら・ストリートファニチャー・園内バス
-    this.foliage = new Foliage(this.scene);
-
-    // 10. ランドマーク（観覧車・恐竜親子・温室・キリンデッキ）
+    // 8. 精巧な3Dランドマーク群（大観覧車・恐竜親子・キリンデッキ・D51等）
     this.landmarks = new Landmarks(this.scene, this.audio);
+
+    // 9. 植生・3D草むら・ストリート設備・自動巡回バス
+    this.environment = new Environment(this.scene, this.mapBuilder);
 
     window.addEventListener('resize', () => this.onResize());
   }
@@ -92,7 +87,6 @@ export class World {
   setupPostProcessing() {
     const renderScene = new RenderPass(this.scene, this.camera);
 
-    // 美しいグレア・ブルーム（夜間ネオンや太陽光の眩しい光拡散）
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
       0.35,  // strength
@@ -109,20 +103,18 @@ export class World {
   }
 
   setupLighting() {
-    // 半球環境光（空光と大地反射光）
     this.hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x3d6e3c, 0.75);
-    this.hemiLight.position.set(0, 60, 0);
+    this.hemiLight.position.set(0, 100, 0);
     this.scene.add(this.hemiLight);
 
-    // 太陽光（DirectionalLight）
     this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.4);
-    this.sunLight.position.set(90, 110, 60);
+    this.sunLight.position.set(200, 320, 150);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.camera.near = 10;
-    this.sunLight.shadow.camera.far = 320;
-    const d = 140;
+    this.sunLight.shadow.camera.far = 800;
+    const d = 350;
     this.sunLight.shadow.camera.left = -d;
     this.sunLight.shadow.camera.right = d;
     this.sunLight.shadow.camera.top = d;
@@ -132,8 +124,7 @@ export class World {
   }
 
   setupSkyAndClouds() {
-    // 大気グラデーションスカイドーム
-    const skyGeo = new THREE.SphereGeometry(460, 32, 16);
+    const skyGeo = new THREE.SphereGeometry(1200, 32, 16);
     this.skyMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       side: THREE.BackSide
@@ -141,134 +132,50 @@ export class World {
     this.skyDome = new THREE.Mesh(skyGeo, this.skyMat);
     this.scene.add(this.skyDome);
 
-    // 流れるリアルな積雲（複数層）
+    // 漂う積雲
     const cloudTex = TextureGenerator.createCloudTexture();
     const cloudMat = new THREE.MeshBasicMaterial({
       map: cloudTex,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.6,
       depthWrite: false
     });
 
     this.clouds = [];
-    for (let i = 0; i < 28; i++) {
-      const cloud = new THREE.Mesh(new THREE.PlaneGeometry(70, 45), cloudMat);
+    for (let i = 0; i < 32; i++) {
+      const cloud = new THREE.Mesh(new THREE.PlaneGeometry(120, 80), cloudMat);
       cloud.rotation.x = -Math.PI / 2;
       cloud.position.set(
-        (Math.random() - 0.5) * 500,
-        90 + Math.random() * 25,
-        (Math.random() - 0.5) * 500
+        (Math.random() - 0.5) * 1200,
+        180 + Math.random() * 40,
+        (Math.random() - 0.5) * 1200
       );
       this.clouds.push(cloud);
       this.scene.add(cloud);
     }
 
-    // 星空パーティクル
+    // 星空
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 1000;
+    const starCount = 1200;
     const starPositions = new Float32Array(starCount * 3);
 
     for (let i = 0; i < starCount; i++) {
       const theta = 2 * Math.PI * Math.random();
       const phi = Math.acos(2 * Math.random() - 1);
-      const r = 440;
+      const r = 1100;
       starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      starPositions[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 15;
+      starPositions[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 20;
       starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
     this.starMat = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: 1.8,
+      size: 2.0,
       transparent: true,
       opacity: 0
     });
     this.stars = new THREE.Points(starGeo, this.starMat);
     this.scene.add(this.stars);
-  }
-
-  setupGround() {
-    // 1. 芝生の大地（PBRテクスチャ ＋ バンプマップ）
-    const grassTex = TextureGenerator.createGrassTexture();
-    const grassBump = TextureGenerator.createGrassBumpMap();
-
-    const groundGeo = new THREE.PlaneGeometry(420, 420, 32, 32);
-    const groundMat = new THREE.MeshStandardMaterial({
-      map: grassTex,
-      bumpMap: grassBump,
-      bumpScale: 0.08,
-      roughness: 0.88,
-      metalness: 0.05
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    this.scene.add(ground);
-
-    // 2. 敷石・インターロッキング舗装路
-    const pavementTex = TextureGenerator.createPavementTexture();
-    const pavementMat = new THREE.MeshStandardMaterial({
-      map: pavementTex,
-      bumpMap: grassBump,
-      bumpScale: 0.05,
-      roughness: 0.75,
-      metalness: 0.1
-    });
-
-    // 中央円形広場
-    const plaza = new THREE.Mesh(new THREE.CircleGeometry(28, 36), pavementMat);
-    plaza.rotation.x = -Math.PI / 2;
-    plaza.position.set(0, 0.02, 0);
-    plaza.receiveShadow = true;
-    this.scene.add(plaza);
-
-    // 中央大通り
-    const mainAvenue = new THREE.Mesh(new THREE.PlaneGeometry(14, 90), pavementMat);
-    mainAvenue.rotation.x = -Math.PI / 2;
-    mainAvenue.position.set(0, 0.03, 50);
-    mainAvenue.receiveShadow = true;
-    this.scene.add(mainAvenue);
-
-    // 東西大通り
-    const crossStreet = new THREE.Mesh(new THREE.PlaneGeometry(240, 10), pavementMat);
-    crossStreet.rotation.x = -Math.PI / 2;
-    crossStreet.position.set(0, 0.03, 0);
-    crossStreet.receiveShadow = true;
-    this.scene.add(crossStreet);
-
-    // 各ゾーン連絡路
-    const addRoad = (x, z, w, l) => {
-      const road = new THREE.Mesh(new THREE.PlaneGeometry(w, l), pavementMat);
-      road.rotation.x = -Math.PI / 2;
-      road.position.set(x, 0.03, z);
-      road.receiveShadow = true;
-      this.scene.add(road);
-    };
-
-    addRoad(80, -25, 10, 110);  // 遊園地へ
-    addRoad(-80, -25, 10, 110); // 動物園へ
-    addRoad(80, 50, 10, 90);    // 植物園へ
-    addRoad(-80, 50, 10, 90);   // 恐竜博物館へ
-  }
-
-  setupWater() {
-    this.waterNormal = TextureGenerator.createWaterNormalTexture();
-
-    const waterGeo = new THREE.CircleGeometry(25, 36);
-    this.waterMat = new THREE.MeshStandardMaterial({
-      color: 0x0284c7,
-      normalMap: this.waterNormal,
-      normalScale: new THREE.Vector2(0.5, 0.5),
-      roughness: 0.12,
-      metalness: 0.75,
-      transparent: true,
-      opacity: 0.88
-    });
-
-    this.waterMesh = new THREE.Mesh(waterGeo, this.waterMat);
-    this.waterMesh.rotation.x = -Math.PI / 2;
-    this.waterMesh.position.set(0, 0.09, 0);
-    this.scene.add(this.waterMesh);
   }
 
   setTimeMode(mode) {
@@ -279,37 +186,37 @@ export class World {
       this.scene.fog.color.setHex(0xcde8f6);
       this.sunLight.color.setHex(0xfffaed);
       this.sunLight.intensity = 1.4;
-      this.sunLight.position.set(90, 110, 60);
+      this.sunLight.position.set(200, 320, 150);
       this.hemiLight.color.setHex(0xdbeafe);
       this.hemiLight.groundColor.setHex(0x3d6e3c);
       this.hemiLight.intensity = 0.75;
       this.starMat.opacity = 0;
       this.bloomPass.strength = 0.35;
-      this.foliage.setNightMode(false);
+      if (this.environment) this.environment.setNightMode(false);
     } else if (mode === 'sunset') {
       this.skyMat.color.setHex(0xf97316);
       this.scene.fog.color.setHex(0xfecdd3);
       this.sunLight.color.setHex(0xfb923c);
       this.sunLight.intensity = 1.1;
-      this.sunLight.position.set(130, 25, 20);
+      this.sunLight.position.set(300, 70, 80);
       this.hemiLight.color.setHex(0xfb7185);
       this.hemiLight.groundColor.setHex(0x451a03);
       this.hemiLight.intensity = 0.65;
       this.starMat.opacity = 0.25;
-      this.bloomPass.strength = 0.55; // 夕日の美しいグレア
-      this.foliage.setNightMode(false);
+      this.bloomPass.strength = 0.55;
+      if (this.environment) this.environment.setNightMode(false);
     } else if (mode === 'night') {
       this.skyMat.color.setHex(0x020617);
       this.scene.fog.color.setHex(0x020617);
       this.sunLight.color.setHex(0x60a5fa);
       this.sunLight.intensity = 0.38;
-      this.sunLight.position.set(-60, 90, -40);
+      this.sunLight.position.set(-150, 250, -100);
       this.hemiLight.color.setHex(0x1e293b);
       this.hemiLight.groundColor.setHex(0x020617);
       this.hemiLight.intensity = 0.32;
       this.starMat.opacity = 0.95;
-      this.bloomPass.strength = 0.95; // 夜間イルミネーションの鮮やかなネオングロー！
-      this.foliage.setNightMode(true);
+      this.bloomPass.strength = 0.95; // 夜間LEDネオングロー！
+      if (this.environment) this.environment.setNightMode(true);
     }
   }
 
@@ -325,26 +232,26 @@ export class World {
     const delta = this.clock.getDelta();
     const elapsedTime = this.clock.getElapsedTime();
 
-    // 1. 雲の風によるゆっくりした移動
+    // 雲の移動
     for (let i = 0; i < this.clouds.length; i++) {
       const c = this.clouds[i];
-      c.position.x += delta * 3.5;
-      if (c.position.x > 250) c.position.x = -250;
+      c.position.x += delta * 4.0;
+      if (c.position.x > 600) c.position.x = -600;
     }
 
-    // 2. 水面波紋のオフセットアニメーション（きらめくさざ波）
-    if (this.waterNormal) {
-      this.waterNormal.offset.x = (elapsedTime * 0.05) % 1;
-      this.waterNormal.offset.y = (elapsedTime * 0.03) % 1;
+    // 水面さざ波アニメーション
+    if (this.mapBuilder && this.mapBuilder.waterNormal) {
+      this.mapBuilder.waterNormal.offset.x = (elapsedTime * 0.05) % 1;
+      this.mapBuilder.waterNormal.offset.y = (elapsedTime * 0.03) % 1;
     }
 
-    // 3. 植生・3D草むら・園内バスの更新
-    if (this.foliage) this.foliage.update(delta, elapsedTime);
-
-    // 4. ランドマークの更新
+    // ランドマーク・噴水の更新
     if (this.landmarks) this.landmarks.update(delta, elapsedTime);
 
-    // 5. ポストプロセッシングによる高品質レンダリング
+    // 植生・自動巡回バスの更新
+    if (this.environment) this.environment.update(delta, elapsedTime);
+
+    // ポストプロセッシングレンダリング
     if (this.composer) {
       this.composer.render();
     } else {
