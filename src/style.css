@@ -36,6 +36,20 @@ body, html {
   z-index: 1;
 }
 
+#canvas-container canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+body.is-dragging #canvas-container canvas,
+#canvas-container canvas:active {
+  cursor: grabbing !important;
+}
+
+body.mouse-hover-mode #canvas-container canvas {
+  cursor: crosshair;
+}
+
 /* UIレイヤー */
 #ui-layer {
   position: absolute;

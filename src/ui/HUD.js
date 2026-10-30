@@ -44,6 +44,25 @@ export class HUD {
       });
     }
 
+    // マウス操作モード切替（ドラッグ回転 ↔ マウス移動追従）
+    const mouseBtn = document.getElementById('btn-mouse-mode');
+    if (mouseBtn) {
+      mouseBtn.addEventListener('click', () => {
+        const mode = this.player.toggleMouseControlMode();
+        if (mode === 'hover') {
+          mouseBtn.textContent = '🎯';
+          mouseBtn.title = '現在のマウス操作：マウス追従（クリック不要）— クリックでドラッグ操作へ';
+          document.body.classList.add('mouse-hover-mode');
+          this.showToast('🎯 マウス追従モード：マウスを動かすだけで視線が向きます（Esc不要）');
+        } else {
+          mouseBtn.textContent = '🖱️';
+          mouseBtn.title = '現在のマウス操作：ドラッグ回転 — クリックでマウス追従へ';
+          document.body.classList.remove('mouse-hover-mode');
+          this.showToast('🖱️ ドラッグ回転モード：クリックしてカメラを回転します（Esc不要）');
+        }
+      });
+    }
+
     // 写真撮影（スクリーンショット保存）
     const photoBtn = document.getElementById('btn-photo');
     if (photoBtn) {
@@ -223,6 +242,17 @@ export class HUD {
       this.actionPrompt.innerHTML = `<span>${closest.icon}</span> <span>[E] ${closest.title} の案内を見る</span>`;
     } else {
       this.actionPrompt.style.display = 'none';
+    }
+  }
+
+  showToast(msg) {
+    const toast = document.getElementById('toast-msg');
+    if (toast) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
     }
   }
 }

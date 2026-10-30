@@ -20,8 +20,13 @@ export class PlayerController {
     // 視線角度
     this.yaw = 0.8; // 中央門から園内を向く
     this.pitch = 0;
+    this.targetYaw = this.yaw;
+    this.targetPitch = this.pitch;
     this.minPitch = -Math.PI / 2.5;
     this.maxPitch = Math.PI / 2.5;
+
+    // マウス操作モード: 'drag' (ドラッグ回転・標準) / 'hover' (クリック不要マウス追従)
+    this.mouseControlMode = 'drag';
 
     // カメラモード: 'fps' (一人称) / 'tps' (三人称) / 'map' (全景ドローンマップ) / 'ferris' (観覧車) / 'bus' (バス乗車)
     this.viewMode = 'fps';
@@ -41,10 +46,9 @@ export class PlayerController {
       jump: false
     };
 
-    // マウスドラッグ追跡
+    // マウスドラッグ追跡（ポインターロックは一切使用せず、カーソルは常に自由）
     this.isMouseDown = false;
     this.previousMousePosition = { x: 0, y: 0 };
-    this.isPointerLocked = false;
 
     // モバイルタッチ追跡
     this.touchMoveVector = { x: 0, y: 0 };
@@ -87,33 +91,66 @@ export class PlayerController {
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     window.addEventListener('keyup', (e) => this.onKeyUp(e));
 
-    // マウス操作
+    // 右クリックメニューの無効化（右ドラッグ視点移動を快適に行えるように）
+    this.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // マウスドラッグ操作（カーソルは常に表示・Esc解除は不要）
     this.domElement.addEventListener('mousedown', (e) => {
       if (this.viewMode === 'map') {
-        // マップモード時：クリックした地面の位置へナビゲート
         this.handleMapClick(e);
         return;
       }
       this.isMouseDown = true;
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
+      document.body.classList.add('is-dragging');
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (!this.isMouseDown) return;
+      // 1. マウス追従モード（クリック不要でマウス移動に視線が追従）
+      if (this.mouseControlMode === 'hover' && this.viewMode !== 'map') {
+        const deltaX = e.clientX - this.previousMousePosition.x;
+        const deltaY = e.clientY - this.previousMousePosition.y;
+
+        const sensitivity = 0.0028;
+        this.targetYaw -= deltaX * sensitivity;
+        this.targetPitch -= deltaY * sensitivity;
+        this.targetPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.targetPitch));
+
+        this.previousMousePosition = { x: e.clientX, y: e.clientY };
+        return;
+      }
+
+      // 2. ドラッグモード（クリックしながら動かした時のみ視線変更）
+      if (!this.isMouseDown) {
+        this.previousMousePosition = { x: e.clientX, y: e.clientY };
+        return;
+      }
+
       const deltaX = e.clientX - this.previousMousePosition.x;
       const deltaY = e.clientY - this.previousMousePosition.y;
 
-      const sensitivity = 0.0032;
-      this.yaw -= deltaX * sensitivity;
-      this.pitch -= deltaY * sensitivity;
-      this.pitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.pitch));
+      const sensitivity = 0.0035;
+      this.targetYaw -= deltaX * sensitivity;
+      this.targetPitch -= deltaY * sensitivity;
+      this.targetPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.targetPitch));
 
       this.previousMousePosition = { x: e.clientX, y: e.clientY };
     });
 
     window.addEventListener('mouseup', () => {
       this.isMouseDown = false;
+      document.body.classList.remove('is-dragging');
     });
+
+    // マウスホイールによるスムーズなズーム / FOV調整
+    this.domElement.addEventListener('wheel', (e) => {
+      if (this.viewMode === 'map') {
+        this.mapHeight = Math.max(80, Math.min(450, this.mapHeight + e.deltaY * 0.25));
+      } else {
+        this.camera.fov = Math.max(35, Math.min(80, this.camera.fov + e.deltaY * 0.04));
+        this.camera.updateProjectionMatrix();
+      }
+    }, { passive: true });
 
     // モバイルタッチ（画面右半分で視点移動）
     this.domElement.addEventListener('touchstart', (e) => {
@@ -213,6 +250,12 @@ export class PlayerController {
     }
   }
 
+  // マウス操作モードの切り替え（ドラッグ回転 ↔ マウス移動追従）
+  toggleMouseControlMode() {
+    this.mouseControlMode = (this.mouseControlMode === 'drag') ? 'hover' : 'drag';
+    return this.mouseControlMode;
+  }
+
   // カメラ視点サイクリング: FPS -> TPS -> ドローン俯瞰MAP -> FPS
   cycleViewMode() {
     if (this.isRidingFerris || this.isRidingBus) return;
@@ -297,6 +340,11 @@ export class PlayerController {
   }
 
   update(delta) {
+    // 視線角度のスムーズ補間（滑らかで自然な追従フィーリング）
+    const smoothFactor = Math.min(1, delta * 24);
+    this.yaw += (this.targetYaw - this.yaw) * smoothFactor;
+    this.pitch += (this.targetPitch - this.pitch) * smoothFactor;
+
     // 1. 観覧車乗車時のカメラ
     if (this.isRidingFerris) {
       const gondolaPos = this.landmarks.getGondolaWorldPosition(0);
